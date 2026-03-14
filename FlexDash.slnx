@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="FlexDash.Api/FlexDash.Api.csproj" />
+  <Project Path="FlexDash.Client/FlexDash.Client.csproj" />
+</Solution>

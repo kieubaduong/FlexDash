@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \"\nimport json\nwith open\\(r'C:\\\\Users\\\\ADMIN\\\\.claude\\\\projects\\\\D--store-github-FlexDash\\\\067b8d54-c84f-4a12-9757-534d4d5bc96c\\\\tool-results\\\\toolu_01Et5oBnnXQ6H7GDpD34Xyq4.json'\\) as f:\n    data = json.load\\(f\\)\nprint\\(data[0]['text'][:8000]\\)\n\")",
+      "Bash(python -c \"\nimport json\nwith open\\(r'C:\\\\Users\\\\ADMIN\\\\.claude\\\\projects\\\\D--store-github-FlexDash\\\\067b8d54-c84f-4a12-9757-534d4d5bc96c\\\\tool-results\\\\toolu_01Et5oBnnXQ6H7GDpD34Xyq4.json'\\) as f:\n    data = json.load\\(f\\)\ntext = data[0]['text']\nprint\\(text[8000:16000]\\)\n\")",
+      "Bash(python -c \"\nimport json\nwith open\\(r'C:\\\\Users\\\\ADMIN\\\\.claude\\\\projects\\\\D--store-github-FlexDash\\\\067b8d54-c84f-4a12-9757-534d4d5bc96c\\\\tool-results\\\\toolu_01Et5oBnnXQ6H7GDpD34Xyq4.json'\\) as f:\n    data = json.load\\(f\\)\ntext = data[0]['text']\nprint\\(text[16000:24000]\\)\n\")"
+    ]
+  }
+}
