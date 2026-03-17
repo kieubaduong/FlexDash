@@ -1,0 +1,90 @@
+@page "/dashboard/config"
+@using FlexDash.Client.Models
+@using FlexDash.Client.Services
+@inject ApiService Api
+@inject NavigationManager Nav
+
+<PageTitle>Configure Dashboard</PageTitle>
+
+<div class="page-header">
+    <h1>Configure Widgets</h1>
+    <a href="/dashboard" class="btn btn-secondary">Back</a>
+</div>
+
+<div class="card">
+    <h2 style="margin:0 0 1rem; font-size:1rem;">Add Widget</h2>
+    <div class="form-group">
+        <label class="form-label">Title</label>
+        <input class="form-control" @bind="_newWidget.Title" placeholder="Widget title" />
+    </div>
+    <div class="form-group">
+        <label class="form-label">Type</label>
+        <select class="form-control" @bind="_newWidget.Type">
+            <option value="LineChart">Line Chart</option>
+            <option value="Gauge">Gauge</option>
+            <option value="StatCard">Stat Card</option>
+            <option value="Table">Table</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label class="form-label">Data Source</label>
+        <select class="form-control" @bind="_newWidget.DataSourceId">
+            @foreach (var ds in _dataSources)
+            {
+                <option value="@ds.Id">@ds.Name</option>
+            }
+        </select>
+    </div>
+    <button class="btn btn-primary" @onclick="AddWidgetAsync">Add Widget</button>
+</div>
+
+<div class="card">
+    <h2 style="margin:0 0 1rem; font-size:1rem;">Current Widgets</h2>
+    @foreach (var w in _widgets)
+    {
+        <div style="display:flex; align-items:center; gap:1rem; padding:0.5rem 0; border-bottom:1px solid #2a2d35;">
+            <span style="flex:1">@w.Title (@w.Type)</span>
+            <button class="btn btn-sm btn-danger" @onclick="() => RemoveWidgetAsync(w.Id)">Remove</button>
+        </div>
+    }
+</div>
+
+@code {
+    private List<WidgetDto> _widgets = [];
+    private List<DataSourceDto> _dataSources = [];
+    private NewWidgetForm _newWidget = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _widgets = await Api.GetWidgetsAsync() ?? [];
+        _dataSources = await Api.GetDataSourcesAsync() ?? [];
+        if (_dataSources.Count > 0)
+            _newWidget.DataSourceId = _dataSources[0].Id;
+    }
+
+    private async Task AddWidgetAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_newWidget.Title)) return;
+
+        var dto = new CreateWidgetDto(
+            _newWidget.DataSourceId, _newWidget.Title, _newWidget.Type,
+            0, _widgets.Count, 1, 1, null);
+
+        await Api.AddWidgetAsync(dto);
+        _widgets = await Api.GetWidgetsAsync() ?? [];
+        _newWidget = new NewWidgetForm { DataSourceId = _dataSources.FirstOrDefault()?.Id ?? Guid.Empty };
+    }
+
+    private async Task RemoveWidgetAsync(Guid widgetId)
+    {
+        await Api.RemoveWidgetAsync(widgetId);
+        _widgets = await Api.GetWidgetsAsync() ?? [];
+    }
+
+    private class NewWidgetForm
+    {
+        public string Title { get; set; } = "";
+        public string Type { get; set; } = "LineChart";
+        public Guid DataSourceId { get; set; }
+    }
+}

@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/Solution Items/" />
   <Project Path="FlexDash.Api/FlexDash.Api.csproj" />
   <Project Path="FlexDash.Client/FlexDash.Client.csproj" />
+  <Project Path="FlexDash.Demo/FlexDash.Demo.csproj" />
+  <Project Path="tests/FlexDash.Tests/FlexDash.Tests.csproj" />
 </Solution>

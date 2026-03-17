@@ -1,0 +1,450 @@
+@page "/datasources"
+@using FlexDash.Client.Models
+@using FlexDash.Client.Services
+@inject ApiService Api
+
+<PageTitle>Data Sources</PageTitle>
+
+<div class="page-header">
+    <h1>Data Sources</h1>
+    <button class="btn btn-primary" @onclick="StartCreate">Add Data Source</button>
+</div>
+
+@if (_showCreate || _editing is not null)
+{
+    <div class="card">
+        <h2 style="margin:0 0 1rem; font-size:1rem;">@(_editing is null ? "New Data Source" : "Edit Data Source")</h2>
+        <div class="form-group">
+            <label class="form-label">Name</label>
+            <input class="form-control" @bind="_form.Name" />
+        </div>
+        <div class="form-group">
+            <label class="form-label">Type</label>
+            <select class="form-control" @bind="_form.Type" @bind:after="OnTypeChanged">
+                <option value="RestApi">REST API</option>
+                <option value="SystemMetrics">System Metrics</option>
+                <option value="WebSocketStream">WebSocket Stream</option>
+            </select>
+        </div>
+        @if (_form.Type == "SystemMetrics")
+        {
+            <h3 style="margin:1rem 0 0.5rem; font-size:0.9rem; color:var(--text-secondary);">SSH Connection (leave empty for local machine)</h3>
+            <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                <div class="form-group" style="flex:3; min-width:200px;">
+                    <label class="form-label">Host</label>
+                    <input class="form-control" placeholder="e.g. 192.168.1.100" @bind="_form.SshHost" />
+                </div>
+                <div class="form-group" style="flex:1; min-width:80px;">
+                    <label class="form-label">Port</label>
+                    <input class="form-control" type="number" @bind="_form.SshPort" />
+                </div>
+            </div>
+            <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                <div class="form-group" style="flex:1; min-width:150px;">
+                    <label class="form-label">Username</label>
+                    <input class="form-control" @bind="_form.SshUsername" />
+                </div>
+                <div class="form-group" style="flex:1; min-width:150px;">
+                    <label class="form-label">Password</label>
+                    <input class="form-control" type="password" @bind="_form.SshPassword" />
+                </div>
+                <div class="form-group" style="flex:1; min-width:200px;">
+                    <label class="form-label">Private Key Path</label>
+                    <input class="form-control" placeholder="e.g. /home/user/.ssh/id_rsa" @bind="_form.SshPrivateKeyPath" />
+                </div>
+            </div>
+            @if (!string.IsNullOrWhiteSpace(_form.SshHost))
+            {
+                <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.75rem;">
+                    <button class="btn btn-sm btn-secondary" @onclick="TestConnectionAsync" disabled="@_testingConnection">
+                        @(_testingConnection ? "Testing..." : "Test Connection")
+                    </button>
+                    @if (_connectionTestResult is not null)
+                    {
+                        <span style="font-size:0.85rem; color:@(_connectionTestResult.IsValid ? "#166534" : "#991b1b");">
+                            @(_connectionTestResult.IsValid ? "Connected successfully" : _connectionTestResult.ErrorMessage)
+                        </span>
+                    }
+                </div>
+            }
+        }
+        else
+        {
+            <div class="form-group">
+                <label class="form-label">Config JSON</label>
+                <textarea class="form-control" rows="4" @bind="_form.ConfigJson" style="font-family:monospace;"></textarea>
+            </div>
+        }
+        @if (_form.Type != "WebSocketStream")
+        {
+            <div class="form-group">
+                <label class="form-label">Polling Interval (seconds)</label>
+                <input class="form-control" type="number" @bind="_form.PollingIntervalSeconds" />
+            </div>
+        }
+
+        <h3 style="margin:1rem 0 0.5rem; font-size:0.9rem; color:var(--text-secondary);">Alert Rules</h3>
+        @for (int i = 0; i < _form.AlertRules.Count; i++)
+            {
+                var index = i;
+                var rule = _form.AlertRules[index];
+                <div class="card" style="padding:0.75rem; margin-bottom:0.5rem; background:var(--bg-primary);">
+                    <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:end;">
+                        <div class="form-group" style="flex:2; min-width:150px; margin-bottom:0;">
+                            <label class="form-label">Name</label>
+                            <input class="form-control" @bind="rule.Name" />
+                        </div>
+                        <div class="form-group" style="flex:1; min-width:100px; margin-bottom:0;">
+                            <label class="form-label">Label Filter</label>
+                            <input class="form-control" placeholder="e.g. cpu, memory" @bind="rule.LabelFilter" />
+                        </div>
+                        <div class="form-group" style="flex:1; min-width:100px; margin-bottom:0;">
+                            <label class="form-label">Severity</label>
+                            <select class="form-control" @bind="rule.Severity">
+                                <option value="Info">Info</option>
+                                <option value="Warning">Warning</option>
+                                <option value="Critical">Critical</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="flex:1; min-width:120px; margin-bottom:0;">
+                            <label class="form-label">Condition</label>
+                            <select class="form-control" @bind="rule.ConditionType">
+                                <option value="Threshold">Threshold</option>
+                                <option value="RateOfChange">Rate of Change</option>
+                                <option value="AbsenceOfData">Absence of Data</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-sm btn-danger" style="margin-bottom:0;" @onclick="() => _form.AlertRules.RemoveAt(index)">Remove</button>
+                    </div>
+
+                    <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.5rem;">
+                        @if (rule.ConditionType == "Threshold")
+                        {
+                            <div class="form-group" style="flex:1; min-width:80px; margin-bottom:0;">
+                                <label class="form-label">Operator</label>
+                                <select class="form-control" @bind="rule.ThresholdOperator">
+                                    <option value=">">&gt;</option>
+                                    <option value=">=">&gt;=</option>
+                                    <option value="<">&lt;</option>
+                                    <option value="<=">&lt;=</option>
+                                    <option value="==">==</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="flex:1; min-width:100px; margin-bottom:0;">
+                                <label class="form-label">Value</label>
+                                <input class="form-control" type="number" step="any" @bind="rule.ThresholdValue" />
+                            </div>
+                        }
+                        else if (rule.ConditionType == "RateOfChange")
+                        {
+                            <div class="form-group" style="flex:1; min-width:120px; margin-bottom:0;">
+                                <label class="form-label">Change (%)</label>
+                                <input class="form-control" type="number" step="any" @bind="rule.RatePercentChange" />
+                            </div>
+                            <div class="form-group" style="flex:1; min-width:120px; margin-bottom:0;">
+                                <label class="form-label">Window (seconds)</label>
+                                <input class="form-control" type="number" @bind="rule.RateWindowSeconds" />
+                            </div>
+                        }
+                        else if (rule.ConditionType == "AbsenceOfData")
+                        {
+                            <div class="form-group" style="flex:1; min-width:120px; margin-bottom:0;">
+                                <label class="form-label">Timeout (seconds)</label>
+                                <input class="form-control" type="number" @bind="rule.AbsenceTimeoutSeconds" />
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        <button class="btn btn-sm btn-secondary" style="margin-bottom:0.75rem;" @onclick="AddAlertRule">+ Add Alert Rule</button>
+
+        @if (_validationResult is not null)
+        {
+            <div style="padding:0.5rem; border-radius:4px; margin-bottom:0.75rem;
+                        background:@(_validationResult.IsValid ? "#f0fdf4" : "#fef2f2");
+                        color:@(_validationResult.IsValid ? "#166534" : "#991b1b");">
+                @(_validationResult.IsValid ? "Config is valid" : _validationResult.ErrorMessage)
+            </div>
+        }
+        <div style="display:flex; gap:0.5rem;">
+            <button class="btn btn-secondary" @onclick="ValidateAsync">Validate</button>
+            <button class="btn btn-primary" @onclick="SaveAsync">Save</button>
+            <button class="btn btn-secondary" @onclick="CancelEdit">Cancel</button>
+        </div>
+    </div>
+}
+
+<div class="card" style="padding:0; overflow:hidden;">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Interval</th>
+                <th>Created</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var ds in _sources)
+            {
+                <tr>
+                    <td>@ds.Name</td>
+                    <td>@ds.Type</td>
+                    <td>@(ds.Type == "WebSocketStream" ? "Stream" : $"{ds.PollingIntervalSeconds} s")</td>
+                    <td>@ds.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd")</td>
+                    <td>
+                        <button class="btn btn-sm btn-secondary" @onclick="() => StartEdit(ds)">Edit</button>
+                        <button class="btn btn-sm btn-danger" @onclick="() => DeleteAsync(ds.Id)">Delete</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    private List<DataSourceDto> _sources = [];
+    private DataSourceForm _form = new();
+    private DataSourceDto? _editing;
+    private bool _showCreate;
+    private ValidationResultDto? _validationResult;
+    private ValidationResultDto? _connectionTestResult;
+    private bool _testingConnection;
+    private List<Guid> _existingRuleIds = [];
+
+    protected override async Task OnInitializedAsync()
+        => _sources = await Api.GetDataSourcesAsync() ?? [];
+
+    private async Task ValidateAsync()
+    {
+        _validationResult = await Api.ValidateDataSourceAsync(
+            new ValidateDataSourceDto(_form.Type, _form.BuildConfigJson()));
+    }
+
+    private async Task TestConnectionAsync()
+    {
+        _testingConnection = true;
+        _connectionTestResult = null;
+        StateHasChanged();
+
+        _connectionTestResult = await Api.TestConnectionAsync(
+            new TestConnectionDto(_form.BuildConfigJson()));
+        _testingConnection = false;
+    }
+
+    private async Task SaveAsync()
+    {
+        var alertRuleInputs = _form.AlertRules
+            .Select(r => new CreateAlertRuleInput(r.Name, r.LabelFilter, r.Severity, r.ConditionType, r.BuildConditionJson()))
+            .ToList();
+
+        string configJson = _form.BuildConfigJson();
+
+        if (_editing is null)
+        {
+            var dto = new CreateDataSourceDto(_form.Name, _form.Type, configJson, _form.PollingIntervalSeconds, alertRuleInputs);
+            await Api.CreateDataSourceAsync(dto);
+        }
+        else
+        {
+            var dto = new UpdateDataSourceDto(_form.Name, _form.Type, configJson, _form.PollingIntervalSeconds);
+            await Api.UpdateDataSourceAsync(_editing.Id, dto);
+
+            // Replace alert rules: delete old, create new
+            foreach (Guid ruleId in _existingRuleIds)
+            {
+                await Api.DeleteAlertRuleAsync(ruleId);
+            }
+            foreach (var rule in alertRuleInputs)
+            {
+                await Api.CreateAlertRuleAsync(new CreateAlertRuleDto(_editing.Id, rule.Name, rule.LabelFilter, rule.Severity, rule.ConditionType, rule.ConditionJson));
+            }
+        }
+
+        _sources = await Api.GetDataSourcesAsync() ?? [];
+        CancelEdit();
+    }
+
+    private async Task DeleteAsync(Guid id)
+    {
+        await Api.DeleteDataSourceAsync(id);
+        _sources = await Api.GetDataSourcesAsync() ?? [];
+    }
+
+    private async Task StartEdit(DataSourceDto ds)
+    {
+        _editing = ds;
+        _showCreate = false;
+        _validationResult = null;
+
+        var rules = await Api.GetAlertRulesAsync(ds.Id) ?? [];
+        _existingRuleIds = rules.Select(r => r.Id).ToList();
+
+        _form = new DataSourceForm
+        {
+            Name = ds.Name,
+            Type = ds.Type,
+            ConfigJson = ds.ConfigJson,
+            PollingIntervalSeconds = ds.PollingIntervalSeconds,
+            AlertRules = rules.Select(AlertRuleForm.FromDto).ToList()
+        };
+
+        if (ds.Type == "SystemMetrics") _form.ParseSshFromConfigJson();
+        _connectionTestResult = null;
+    }
+
+    private void StartCreate()
+    {
+        _editing = null;
+        _showCreate = true;
+        _form = new DataSourceForm();
+        _validationResult = null;
+        _existingRuleIds = [];
+    }
+
+    private void CancelEdit()
+    {
+        _editing = null;
+        _showCreate = false;
+        _form = new DataSourceForm();
+        _validationResult = null;
+        _existingRuleIds = [];
+    }
+
+    private void OnTypeChanged()
+    {
+        if (_form.Type == "WebSocketStream")
+        {
+            _form.PollingIntervalSeconds = 0;
+        }
+        else if (_form.PollingIntervalSeconds == 0)
+        {
+            _form.PollingIntervalSeconds = 5;
+        }
+    }
+
+    private void AddAlertRule()
+    {
+        _form.AlertRules.Add(new AlertRuleForm());
+    }
+
+    private class DataSourceForm
+    {
+        public string Name { get; set; } = "";
+        public string Type { get; set; } = "RestApi";
+        public string ConfigJson { get; set; } = "{}";
+        public int PollingIntervalSeconds { get; set; } = 5;
+        public List<AlertRuleForm> AlertRules { get; set; } = [new()];
+
+        // SSH fields for SystemMetrics
+        public string SshHost { get; set; } = "";
+        public int SshPort { get; set; } = 22;
+        public string SshUsername { get; set; } = "";
+        public string SshPassword { get; set; } = "";
+        public string SshPrivateKeyPath { get; set; } = "";
+
+        public string BuildConfigJson()
+        {
+            if (Type != "SystemMetrics") return ConfigJson;
+            if (string.IsNullOrWhiteSpace(SshHost)) return "{}";
+
+            var parts = new List<string> { $"\"Host\":\"{EscapeJson(SshHost)}\"", $"\"Port\":{SshPort}" };
+            if (!string.IsNullOrWhiteSpace(SshUsername))
+                parts.Add($"\"Username\":\"{EscapeJson(SshUsername)}\"");
+            if (!string.IsNullOrWhiteSpace(SshPassword))
+                parts.Add($"\"Password\":\"{EscapeJson(SshPassword)}\"");
+            if (!string.IsNullOrWhiteSpace(SshPrivateKeyPath))
+                parts.Add($"\"PrivateKeyPath\":\"{EscapeJson(SshPrivateKeyPath)}\"");
+
+            return "{" + string.Join(",", parts) + "}";
+        }
+
+        public void ParseSshFromConfigJson()
+        {
+            try
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(ConfigJson);
+                var root = doc.RootElement;
+                if (root.TryGetProperty("Host", out var host)) SshHost = host.GetString() ?? "";
+                if (root.TryGetProperty("Port", out var port)) SshPort = port.GetInt32();
+                if (root.TryGetProperty("Username", out var user)) SshUsername = user.GetString() ?? "";
+                if (root.TryGetProperty("Password", out var pass)) SshPassword = pass.GetString() ?? "";
+                if (root.TryGetProperty("PrivateKeyPath", out var key)) SshPrivateKeyPath = key.GetString() ?? "";
+            }
+            catch { }
+        }
+
+        private static string EscapeJson(string s) => s.Replace("\\", "\\\\").Replace("\"", "\\\"");
+    }
+
+    private class AlertRuleForm
+    {
+        public string Name { get; set; } = "High value alert";
+        public string? LabelFilter { get; set; }
+        public string Severity { get; set; } = "Warning";
+        public string ConditionType { get; set; } = "Threshold";
+
+        // Threshold
+        public string ThresholdOperator { get; set; } = ">";
+        public double ThresholdValue { get; set; } = 90;
+
+        // RateOfChange
+        public double RatePercentChange { get; set; } = 50;
+        public int RateWindowSeconds { get; set; } = 60;
+
+        // AbsenceOfData
+        public int AbsenceTimeoutSeconds { get; set; } = 30;
+
+        public string BuildConditionJson() => ConditionType switch
+        {
+            "Threshold" => $$"""{"Operator":"{{ThresholdOperator}}","Value":{{ThresholdValue}}}""",
+            "RateOfChange" => $$"""{"PercentChange":{{RatePercentChange}},"WindowSeconds":{{RateWindowSeconds}}}""",
+            "AbsenceOfData" => $$"""{"TimeoutSeconds":{{AbsenceTimeoutSeconds}}}""",
+            _ => "{}"
+        };
+
+        public static AlertRuleForm FromDto(AlertRuleDto dto)
+        {
+            var form = new AlertRuleForm
+            {
+                Name = dto.Name,
+                LabelFilter = dto.LabelFilter,
+                Severity = dto.Severity,
+                ConditionType = dto.ConditionType
+            };
+
+            try
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(dto.ConditionJson);
+                var root = doc.RootElement;
+
+                switch (dto.ConditionType)
+                {
+                    case "Threshold":
+                        if (root.TryGetProperty("Operator", out var op))
+                            form.ThresholdOperator = op.GetString() ?? ">";
+                        if (root.TryGetProperty("Value", out var val))
+                            form.ThresholdValue = val.GetDouble();
+                        break;
+                    case "RateOfChange":
+                        if (root.TryGetProperty("PercentChange", out var pct))
+                            form.RatePercentChange = pct.GetDouble();
+                        if (root.TryGetProperty("WindowSeconds", out var win))
+                            form.RateWindowSeconds = win.GetInt32();
+                        break;
+                    case "AbsenceOfData":
+                        if (root.TryGetProperty("TimeoutSeconds", out var timeout))
+                            form.AbsenceTimeoutSeconds = timeout.GetInt32();
+                        break;
+                }
+            }
+            catch
+            {
+                // Keep defaults if JSON is malformed
+            }
+
+            return form;
+        }
+    }
+}

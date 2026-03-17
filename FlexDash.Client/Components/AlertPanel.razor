@@ -1,0 +1,62 @@
+@using FlexDash.Client.Models
+@using FlexDash.Client.Services
+@inject ApiService Api
+@implements IDisposable
+
+<div class="alert-panel">
+    <h2>Alerts (@_alerts.Count)</h2>
+    @if (_alerts.Count == 0)
+    {
+        <p style="color:#94a3b8; font-size:0.875rem;">No active alerts.</p>
+    }
+    else
+    {
+        @foreach (var alert in _alerts.OrderByDescending(a => a.TriggeredAt))
+        {
+            <div class="alert-item severity-@alert.AlertRuleName">
+                <div style="flex:1">
+                    <div class="alert-message">@alert.Message</div>
+                    <div class="alert-time">@alert.TriggeredAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</div>
+                </div>
+                @if (!alert.IsAcknowledged)
+                {
+                    <button class="btn btn-sm btn-secondary" @onclick="() => AckAsync(alert.Id)">Ack</button>
+                }
+            </div>
+        }
+    }
+</div>
+
+@code {
+    [Parameter] public SignalRService? SignalR { get; set; }
+
+    private List<AlertEventDto> _alerts = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        var events = await Api.GetAlertEventsAsync(50);
+        if (events is not null)
+            _alerts = events.Where(e => !e.IsAcknowledged).ToList();
+
+        if (SignalR is not null)
+            SignalR.OnAlertReceived = OnAlert;
+    }
+
+    private void OnAlert(AlertEventDto alert)
+    {
+        _alerts.Insert(0, alert);
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async Task AckAsync(Guid id)
+    {
+        await Api.AcknowledgeAlertAsync(id);
+        _alerts.RemoveAll(a => a.Id == id);
+    }
+
+    public void Dispose()
+    {
+        if (SignalR is not null)
+            SignalR.OnAlertReceived = null;
+    }
+}

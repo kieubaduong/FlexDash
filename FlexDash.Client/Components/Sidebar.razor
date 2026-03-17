@@ -1,0 +1,36 @@
+@using FlexDash.Client.Models
+@using FlexDash.Client.Services
+@inject ApiService Api
+@inject NavigationManager Nav
+
+<nav class="sidebar">
+    <div class="sidebar-section-title">Navigation</div>
+    <NavLink class="sidebar-link" href="dashboard" Match="NavLinkMatch.All">Dashboard</NavLink>
+    <NavLink class="sidebar-link" href="datasources">Data Sources</NavLink>
+
+    @if (_alertCount > 0)
+    {
+        <div class="sidebar-section-title">Alerts</div>
+        <span class="sidebar-link">
+            Active
+            <span class="badge-alert">@_alertCount</span>
+        </span>
+    }
+</nav>
+
+@code {
+    [Parameter] public int AlertCount { get; set; }
+
+    private int _alertCount;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var events = await Api.GetAlertEventsAsync(200);
+        _alertCount = events?.Count(e => !e.IsAcknowledged) ?? 0;
+    }
+
+    protected override void OnParametersSet()
+    {
+        _alertCount = AlertCount;
+    }
+}

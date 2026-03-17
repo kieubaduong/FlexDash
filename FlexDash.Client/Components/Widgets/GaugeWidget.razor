@@ -1,0 +1,48 @@
+@using FlexDash.Client.Models
+@inject IJSRuntime JS
+
+<div class="widget-card">
+    <h3>@Title</h3>
+    <div class="widget-chart-container">
+        <canvas id="@_canvasId"></canvas>
+    </div>
+    @if (_latestValue.HasValue)
+    {
+        <div style="text-align:center; font-size:1.4rem; font-weight:700;">
+            @_latestValue.Value.ToString("F1")%
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public DataPointDto[]? DataPoints { get; set; }
+    [Parameter] public double Min { get; set; } = 0;
+    [Parameter] public double Max { get; set; } = 100;
+
+    private readonly string _canvasId = $"gauge-{Guid.NewGuid():N}";
+    private bool _initialized;
+    private double? _latestValue;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (DataPoints is null || DataPoints.Length == 0) return;
+
+        var latest = DataPoints.OrderByDescending(p => p.Timestamp).First();
+        bool valueChanged = _latestValue != latest.Value;
+        _latestValue = latest.Value;
+
+        if (!_initialized)
+        {
+            _initialized = true;
+            await JS.InvokeVoidAsync("FlexDash.createGaugeChart", _canvasId, latest.Value, Min, Max);
+            StateHasChanged();
+        }
+        else
+        {
+            await JS.InvokeVoidAsync("FlexDash.updateGauge", _canvasId, latest.Value, Min, Max);
+            if (valueChanged)
+                StateHasChanged();
+        }
+    }
+}

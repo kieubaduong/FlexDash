@@ -1,0 +1,36 @@
+@using FlexDash.Client.Models
+@inject IJSRuntime JS
+
+<div class="widget-card">
+    <h3>@Title</h3>
+    <div class="widget-chart-container">
+        <canvas id="@_canvasId"></canvas>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public DataPointDto[]? DataPoints { get; set; }
+
+    private readonly string _canvasId = $"line-{Guid.NewGuid():N}";
+    private bool _initialized;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (DataPoints is null || DataPoints.Length == 0) return;
+
+        var ordered = DataPoints.OrderBy(p => p.Timestamp).ToArray();
+        var labels = ordered.Select(p => p.Timestamp.ToLocalTime().ToString("HH:mm:ss")).ToArray();
+        var data = ordered.Select(p => p.Value).ToArray();
+
+        if (!_initialized)
+        {
+            _initialized = true;
+            await JS.InvokeVoidAsync("FlexDash.createLineChart", _canvasId, labels, data);
+        }
+        else
+        {
+            await JS.InvokeVoidAsync("FlexDash.updateLineChart", _canvasId, labels, data);
+        }
+    }
+}

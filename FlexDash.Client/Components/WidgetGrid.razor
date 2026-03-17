@@ -1,0 +1,58 @@
+@using FlexDash.Client.Models
+@using FlexDash.Client.Services
+@inject ApiService Api
+
+<div class="widget-grid">
+    @foreach (var widget in Widgets)
+    {
+        var style = $"grid-column: {widget.GridColumn + 1} / span {widget.GridWidth}; grid-row: {widget.GridRow + 1} / span {widget.GridHeight};";
+        <div style="@style"
+             draggable="true"
+             @ondragstart="() => OnDragStart(widget)"
+             @ondragover:preventDefault="true"
+             @ondrop="() => OnDrop(widget)">
+            @switch (widget.Type)
+            {
+                case "LineChart":
+                    <LineChartWidget Title="@widget.Title" DataPoints="GetPoints(widget.DataSourceId, widget.LabelFilter)" />
+                    break;
+                case "Gauge":
+                    <GaugeWidget Title="@widget.Title" DataPoints="GetPoints(widget.DataSourceId, widget.LabelFilter)" />
+                    break;
+                case "Table":
+                    <TableWidget Title="@widget.Title" DataPoints="GetPoints(widget.DataSourceId, widget.LabelFilter)" />
+                    break;
+                default:
+                    <StatCardWidget Title="@widget.Title" DataPoints="GetPoints(widget.DataSourceId, widget.LabelFilter)" />
+                    break;
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public List<WidgetDto> Widgets { get; set; } = [];
+    [Parameter] public Dictionary<Guid, DataPointDto[]> DataBySource { get; set; } = [];
+
+    private WidgetDto? _dragging;
+
+    private DataPointDto[]? GetPoints(Guid sourceId, string? labelFilter)
+    {
+        if (!DataBySource.TryGetValue(sourceId, out var pts))
+            return null;
+        if (labelFilter is not null)
+            pts = pts.Where(p => p.Label == labelFilter).ToArray();
+        return pts;
+    }
+
+    private void OnDragStart(WidgetDto widget) => _dragging = widget;
+
+    private async Task OnDrop(WidgetDto target)
+    {
+        if (_dragging is null || _dragging.Id == target.Id) return;
+
+        var dto = new UpdateWidgetPositionDto(target.GridColumn, target.GridRow, _dragging.GridWidth, _dragging.GridHeight);
+        await Api.UpdateWidgetPositionAsync(_dragging.Id, dto);
+        _dragging = null;
+    }
+}

@@ -1,0 +1,50 @@
+[
+  {
+    "Name": "All (with Demo)",
+    "Projects": [
+      {
+        "Path": "FlexDash.Api\\FlexDash.Api.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "FlexDash.Client\\FlexDash.Client.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "FlexDash.Demo\\FlexDash.Demo.csproj",
+        "Action": "Start"
+      }
+    ]
+  },
+  {
+    "Name": "API + Client",
+    "Projects": [
+      {
+        "Path": "FlexDash.Api\\FlexDash.Api.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "FlexDash.Client\\FlexDash.Client.csproj",
+        "Action": "Start"
+      }
+    ]
+  },
+  {
+    "Name": "API only",
+    "Projects": [
+      {
+        "Path": "FlexDash.Api\\FlexDash.Api.csproj",
+        "Action": "Start"
+      }
+    ]
+  },
+  {
+    "Name": "Client only",
+    "Projects": [
+      {
+        "Path": "FlexDash.Client\\FlexDash.Client.csproj",
+        "Action": "Start"
+      }
+    ]
+  }
+]

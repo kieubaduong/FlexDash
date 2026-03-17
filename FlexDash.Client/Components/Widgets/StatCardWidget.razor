@@ -1,0 +1,25 @@
+@using FlexDash.Client.Models
+
+<div class="widget-card">
+    <h3>@Title</h3>
+    @if (Latest is not null)
+    {
+        <div class="stat-card-value">@Latest.Value.ToString("F1")</div>
+        @if (!string.IsNullOrEmpty(Latest.Label))
+        {
+            <div class="stat-card-label">@Latest.Label</div>
+        }
+        <div class="stat-card-timestamp">@Latest.Timestamp.ToLocalTime().ToString("HH:mm:ss")</div>
+    }
+    else
+    {
+        <div class="stat-card-label">Waiting for data...</div>
+    }
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public DataPointDto[]? DataPoints { get; set; }
+
+    private DataPointDto? Latest => DataPoints?.OrderByDescending(p => p.Timestamp).FirstOrDefault();
+}

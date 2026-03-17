@@ -37,7 +37,6 @@ FlexDash/                         ← solution folder
 │   ├── Plugins/
 │   │   ├── IDataSourcePlugin.cs   # The ONE interface — adapter pattern
 │   │   ├── RestApiPlugin.cs
-│   │   ├── SqlQueryPlugin.cs
 │   │   ├── SystemMetricsPlugin.cs
 │   │   └── WebSocketStreamPlugin.cs
 │   ├── Hubs/

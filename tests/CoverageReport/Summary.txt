@@ -1,0 +1,64 @@
+Summary
+  Generated on: 16/3/2026 - 11:31:35 PM
+  Coverage date: 16/3/2026 - 11:31:05 PM
+  Parser: Cobertura
+  Assemblies: 1
+  Classes: 42
+  Files: 30
+  Line coverage: 20%
+  Covered lines: 264
+  Uncovered lines: 1050
+  Coverable lines: 1314
+  Total lines: 2110
+  Branch coverage: 13% (59 of 452)
+  Covered branches: 59
+  Total branches: 452
+  Method coverage: 36.5% (69 of 189)
+  Full method coverage: 31.7% (60 of 189)
+  Covered methods: 69
+  Fully covered methods: 60
+  Total methods: 189
+
+FlexDash.Api                                        20%
+  FlexDash.Api.Controllers.AlertController           0%
+  FlexDash.Api.Controllers.DashboardController       0%
+  FlexDash.Api.Controllers.DataPointController       0%
+  FlexDash.Api.Controllers.DataSourceController      0%
+  FlexDash.Api.Core.DataPointBuffer                100%
+  FlexDash.Api.Core.JsonHelper                      90%
+  FlexDash.Api.Core.Result<T>                      100%
+  FlexDash.Api.Core.RingBuffer<T>                 95.4%
+  FlexDash.Api.Data.AlertDbContext                 100%
+  FlexDash.Api.Data.DataSourceDbContext            100%
+  FlexDash.Api.Data.SeedData                         0%
+  FlexDash.Api.Data.WidgetDbContext                  0%
+  FlexDash.Api.Dtos.AlertEventDto                  100%
+  FlexDash.Api.Dtos.AlertRuleDto                     0%
+  FlexDash.Api.Dtos.CreateAlertRuleDto               0%
+  FlexDash.Api.Dtos.CreateDataSourceDto              0%
+  FlexDash.Api.Dtos.CreateWidgetDto                  0%
+  FlexDash.Api.Dtos.DataPointDto                   100%
+  FlexDash.Api.Dtos.DataSourceDto                    0%
+  FlexDash.Api.Dtos.UpdateAlertRuleDto               0%
+  FlexDash.Api.Dtos.UpdateDataSourceDto              0%
+  FlexDash.Api.Dtos.UpdateWidgetPositionDto          0%
+  FlexDash.Api.Dtos.ValidateDataSourceDto            0%
+  FlexDash.Api.Dtos.ValidationResultDto            100%
+  FlexDash.Api.Dtos.WidgetDataUpdate                 0%
+  FlexDash.Api.Dtos.WidgetDto                        0%
+  FlexDash.Api.Hubs.DashboardHub                     0%
+  FlexDash.Api.Models.AlertEvent                   100%
+  FlexDash.Api.Models.AlertRule                    100%
+  FlexDash.Api.Models.DataSource                    75%
+  FlexDash.Api.Models.Widget                         0%
+  FlexDash.Api.Plugins.RestApiPlugin              31.2%
+  FlexDash.Api.Plugins.SqlQueryPlugin                0%
+  FlexDash.Api.Plugins.SystemMetricsPlugin           0%
+  FlexDash.Api.Plugins.WebSocketStreamPlugin         0%
+  FlexDash.Api.Services.AlertEngine               87.1%
+  FlexDash.Api.Services.DashboardService             0%
+  FlexDash.Api.Services.DataSourceOrchestrator    65.9%
+  FlexDash.Api.Workers.PollingWorker                 0%
+  Microsoft.AspNetCore.OpenApi.Generated             0%
+  Program                                            0%
+  System.Runtime.CompilerServices                    0%

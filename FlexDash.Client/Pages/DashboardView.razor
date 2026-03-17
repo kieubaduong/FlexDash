@@ -1,0 +1,72 @@
+@page "/dashboard"
+@using FlexDash.Client.Models
+@using FlexDash.Client.Services
+@using FlexDash.Client.Components
+@inject ApiService Api
+@inject SignalRService SignalR
+@implements IAsyncDisposable
+
+<PageTitle>System Overview</PageTitle>
+
+<div class="page-header">
+    <h1>System Overview</h1>
+    <a href="/dashboard/config" class="btn btn-secondary">Configure</a>
+</div>
+
+<WidgetGrid Widgets="_widgets" DataBySource="_dataBySource" />
+<AlertPanel SignalR="SignalR" />
+
+@code {
+    private List<WidgetDto> _widgets = [];
+    private Dictionary<Guid, DataPointDto[]> _dataBySource = [];
+    private List<Guid> _subscribedSources = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        _widgets = await Api.GetWidgetsAsync() ?? [];
+
+        // Load initial data
+        var sourceIds = _widgets.Select(w => w.DataSourceId).Distinct().ToList();
+        foreach (var sourceId in sourceIds)
+        {
+            var pts = await Api.GetDataPointsAsync(sourceId, 50);
+            if (pts is not null)
+                _dataBySource[sourceId] = [.. pts];
+        }
+
+        // Start SignalR
+        try
+        {
+            await SignalR.StartAsync("https://localhost:7095/hubs/dashboard");
+            SignalR.OnDataReceived = OnDataReceived;
+
+            foreach (var sourceId in sourceIds)
+            {
+                await SignalR.SubscribeToSourceAsync(sourceId);
+                _subscribedSources.Add(sourceId);
+            }
+        }
+        catch (Exception ex) { Console.Error.WriteLine($"SignalR connection failed: {ex.Message}"); }
+    }
+
+    private void OnDataReceived(WidgetDataUpdate update)
+    {
+        DataPointDto[] existing = _dataBySource.TryGetValue(update.DataSourceId, out DataPointDto[]? pts) ? pts : [];
+        DataPointDto[] merged = existing.Concat(update.DataPoints)
+            .OrderByDescending(p => p.Timestamp)
+            .Take(50)
+            .ToArray();
+        _dataBySource = new Dictionary<Guid, DataPointDto[]>(_dataBySource)
+        {
+            [update.DataSourceId] = merged
+        };
+        InvokeAsync(StateHasChanged);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        foreach (var sid in _subscribedSources)
+            await SignalR.UnsubscribeFromSourceAsync(sid);
+        SignalR.OnDataReceived = null;
+    }
+}

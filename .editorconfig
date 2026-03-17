@@ -1,0 +1,3 @@
+﻿[*.cs]
+# Require braces for single-line control statements
+csharp_prefer_braces = true:warning
